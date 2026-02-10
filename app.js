@@ -638,6 +638,18 @@ const SCENARIOS = [
         params: { demandShift: 0, supplyShift: 3, demandElasticity: 1, supplyElasticity: 1 }
     },
     {
+        id: 'business-expectations',
+        title: 'Business Expectations Change',
+        category: 'supply',
+        tag: 'Supply Shift',
+        preview: 'Firms\' expectations about future prices or conditions can shift supply.',
+        cause: '<strong>Cause:</strong> Firms anticipate future price increases or deteriorating market conditions.',
+        mechanism: '<strong>Mechanism:</strong> If firms expect prices to rise → they may hold off current supply (shift left). If outlook is negative → firms may exit the market (shift left). Positive expectations can attract entry (shift right).',
+        result: '<strong>Result:</strong> Expectations of rising prices → supply ↓ → equilibrium price ↑, quantity ↓. Expectations of falling conditions → supply ↓ similarly.',
+        example: '<strong>Example:</strong> Oil producers holding back supply in anticipation of higher future prices. Negative economic outlook causing firms to exit, reducing supply.',
+        params: { demandShift: 0, supplyShift: -2, demandElasticity: 1, supplyElasticity: 1 }
+    },
+    {
         id: 'combined-growth',
         title: 'Economic Growth (D↑ and S↑)',
         category: 'combined',
@@ -708,6 +720,30 @@ const SCENARIOS = [
         result: '<strong>Result:</strong> Small price ↑, large quantity ↑.',
         example: '<strong>Example:</strong> Digital goods (e.g. streaming subscriptions) have nearly perfectly elastic supply — increased demand adds users at minimal extra cost.',
         params: { demandShift: 3, supplyShift: 0, demandElasticity: 1, supplyElasticity: 3 }
+    },
+    {
+        id: 'inelastic-demand-supply-up',
+        title: 'Supply ↑ with Inelastic Demand',
+        category: 'combined',
+        tag: 'Combined',
+        preview: 'When demand is inelastic, a supply increase causes a large price fall but small quantity increase.',
+        cause: '<strong>Cause:</strong> Supply increases (any non-price factor) while demand is inelastic (e.g. necessities, few substitutes).',
+        mechanism: '<strong>Mechanism:</strong> The steep demand curve means consumers don\'t respond much to price changes. Most of the adjustment comes through price.',
+        result: '<strong>Result:</strong> Large price ↓, small quantity ↑. Elasticity of demand has a stronger effect on changes in equilibrium price.',
+        example: '<strong>Strategic insight:</strong> If demand is inelastic, do NOT increase supply — prices will fall faster than output rises, so total revenue falls.',
+        params: { demandShift: 0, supplyShift: 3, demandElasticity: 0.3, supplyElasticity: 1 }
+    },
+    {
+        id: 'elastic-demand-supply-up',
+        title: 'Supply ↑ with Elastic Demand',
+        category: 'combined',
+        tag: 'Combined',
+        preview: 'When demand is elastic, a supply increase causes a small price fall but large quantity increase.',
+        cause: '<strong>Cause:</strong> Supply increases while demand is elastic (e.g. many substitutes, luxury goods).',
+        mechanism: '<strong>Mechanism:</strong> The flat demand curve means consumers are very responsive. Most of the adjustment comes through quantity.',
+        result: '<strong>Result:</strong> Small price ↓, large quantity ↑.',
+        example: '<strong>Strategic insight:</strong> If demand is elastic, increase supply — output grows faster than price declines, so total revenue rises.',
+        params: { demandShift: 0, supplyShift: 3, demandElasticity: 3, supplyElasticity: 1 }
     },
     {
         id: 'engineered-shortage',

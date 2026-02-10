@@ -537,9 +537,137 @@ footer {
 
 /* --- Responsive --- */
 @media (max-width: 700px) {
-    .graph-layout { flex-direction: column; }
-    .controls-panel { flex: 1 1 100%; }
-    .elasticity-layout { flex-direction: column; }
-    .scenario-detail-layout { flex-direction: column; }
-    nav#main-nav { flex-wrap: wrap; }
+    html { font-size: 14px; }
+
+    header { padding: 1.2rem 0.8rem 0.6rem; }
+    header h1 { font-size: 1.5rem; }
+    header .subtitle { font-size: 0.82rem; }
+
+    nav#main-nav {
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        padding: 0.4rem 0.6rem;
+        margin-bottom: 1rem;
+    }
+    .nav-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.78rem;
+    }
+
+    .tab-content { padding: 0 0.6rem; }
+
+    /* --- Graph tab --- */
+    .graph-layout {
+        flex-direction: column;
+    }
+    .canvas-wrap {
+        flex: 1 1 100%;
+        min-width: 0;
+        padding: 0.5rem;
+    }
+    .canvas-wrap canvas {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 560 / 500;
+    }
+    .controls-panel {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    .controls-panel fieldset {
+        padding: 0.6rem 0.7rem;
+    }
+    .controls-panel label {
+        font-size: 0.78rem;
+    }
+    .eq-badge {
+        font-size: 0.72rem;
+        padding: 0.25rem 0.5rem;
+        bottom: 0.5rem;
+        left: 0.5rem;
+    }
+    .explanation-box {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.82rem;
+    }
+    .elas-label {
+        font-size: 0.68rem;
+        padding: 0.1rem 0.4rem;
+    }
+
+    /* --- Elasticity tab --- */
+    .elasticity-subtabs {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    .sub-btn {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.78rem;
+    }
+    .elasticity-layout {
+        flex-direction: column;
+    }
+    .elasticity-canvas-wrap {
+        flex: 1 1 100%;
+        min-width: 0;
+        padding: 0.5rem;
+    }
+    .elasticity-canvas-wrap canvas {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 440 / 380;
+    }
+    .elasticity-info {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+    .elas-presets {
+        gap: 0.2rem;
+    }
+    .elas-radio {
+        font-size: 0.68rem;
+        padding: 0.15rem 0.35rem;
+    }
+    .elas-table {
+        font-size: 0.75rem;
+    }
+    .elas-table th, .elas-table td {
+        padding: 0.3rem 0.35rem;
+    }
+    .formula-display {
+        font-size: 0.88rem;
+        padding: 0.4rem 0.7rem;
+    }
+
+    /* --- Good Types tab --- */
+    .goods-grid {
+        grid-template-columns: 1fr;
+    }
+    .good-canvas {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 260 / 180;
+    }
+
+    /* --- Formulae tab --- */
+    .formulae-grid {
+        grid-template-columns: 1fr;
+    }
+    .formula-big {
+        font-size: 1rem;
+    }
+
+    /* --- Scenario detail --- */
+    .scenario-detail-layout {
+        flex-direction: column;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
+    html { font-size: 13px; }
+    header h1 { font-size: 1.3rem; }
+    .nav-btn { padding: 0.3rem 0.55rem; font-size: 0.72rem; }
+    .controls-panel fieldset { padding: 0.4rem 0.5rem; }
+    .eq-badge { font-size: 0.65rem; padding: 0.2rem 0.4rem; }
 }
