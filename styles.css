@@ -566,9 +566,8 @@ footer {
         padding: 0.5rem;
     }
     .canvas-wrap canvas {
-        width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 560 / 500;
+        display: block;
+        max-width: 100%;
     }
     .controls-panel {
         flex: 1 1 100%;
@@ -613,9 +612,8 @@ footer {
         padding: 0.5rem;
     }
     .elasticity-canvas-wrap canvas {
-        width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 440 / 380;
+        display: block;
+        max-width: 100%;
     }
     .elasticity-info {
         flex: 1 1 100%;
@@ -644,9 +642,8 @@ footer {
         grid-template-columns: 1fr;
     }
     .good-canvas {
-        width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 260 / 180;
+        display: block;
+        max-width: 100%;
     }
 
     /* --- Formulae tab --- */

@@ -58,8 +58,20 @@ function setupHiDPICanvas(canvas) {
         canvas._intendedWidth = canvas.width || 440;
         canvas._intendedHeight = canvas.height || 380;
     }
-    const logW = canvas._intendedWidth;
-    const logH = canvas._intendedHeight;
+    let logW = canvas._intendedWidth;
+    let logH = canvas._intendedHeight;
+
+    // Responsive: if the parent container is narrower, scale canvas down
+    const parent = canvas.parentElement;
+    if (parent) {
+        const availW = parent.clientWidth - 16; // 16px breathing room
+        if (availW > 0 && availW < logW) {
+            const scale = availW / logW;
+            logW = Math.round(availW);
+            logH = Math.round(canvas._intendedHeight * scale);
+        }
+    }
+
     canvas.width = logW * dpr;
     canvas.height = logH * dpr;
     canvas.style.width = logW + 'px';
