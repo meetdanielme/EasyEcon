@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyEcon — Supply, Demand & Equilibrium</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+    <h1>EasyEcon</h1>
+    <p class="subtitle">Interactive Supply, Demand & Equilibrium Study Tool</p>
+</header>
+
+<!-- ===== NAVIGATION ===== -->
+<nav id="main-nav">
+    <button class="nav-btn active" data-tab="graph">Graph</button>
+    <button class="nav-btn" data-tab="elasticity">Elasticity</button>
+    <button class="nav-btn" data-tab="goods">Good Types</button>
+    <button class="nav-btn" data-tab="formulae">Formulae</button>
+</nav>
+
+<!-- ============================================================ -->
+<!-- TAB 1 — INTERACTIVE GRAPH (with Scenarios)                    -->
+<!-- ============================================================ -->
+<section id="tab-graph" class="tab-content active">
+
+    <!-- Explanation box on TOP so it's always visible -->
+    <div id="graph-explanation" class="explanation-box">
+        <p>Drag the <strong>Shift</strong> sliders to move curves left/right (non-price factors). Adjust <strong>Elasticity</strong> to change responsiveness. Enable <strong>Price Floor/Ceiling</strong> to see government intervention effects.</p>
+    </div>
+
+    <div class="graph-layout">
+
+        <!-- Canvas -->
+        <div class="canvas-wrap">
+            <canvas id="mainCanvas" width="560" height="500"></canvas>
+            <div id="eq-info" class="eq-badge">
+                Equilibrium: <span id="eq-price">—</span> , <span id="eq-qty">—</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-panel">
+
+            <!-- Scenarios dropdown -->
+            <fieldset>
+                <legend>Scenarios</legend>
+                <select id="scenarioSelect">
+                    <option value="">— Manual control —</option>
+                    <optgroup label="Demand Shifts" id="opt-demand"></optgroup>
+                    <optgroup label="Supply Shifts" id="opt-supply"></optgroup>
+                    <optgroup label="Combined" id="opt-combined"></optgroup>
+                    <optgroup label="Price Controls" id="opt-controls"></optgroup>
+                </select>
+                <!-- Scenario detail inline right below the dropdown -->
+                <div id="scenario-detail" class="scenario-detail-inline hidden">
+                    <h4 id="scenario-title"></h4>
+                    <div id="scenario-category" class="scenario-tag"></div>
+                    <p id="scenario-cause" class="scenario-field"></p>
+                    <p id="scenario-mechanism" class="scenario-field"></p>
+                    <p id="scenario-result" class="scenario-field"></p>
+                    <div id="scenario-example" class="scenario-example"></div>
+                </div>
+            </fieldset>
+
+            <!-- Demand -->
+            <fieldset class="fieldset-demand">
+                <legend>Demand Curve</legend>
+                <label>Shift
+                    <input type="range" id="demandShift" min="-5" max="5" value="0" step="1">
+                    <span id="demandShiftVal" class="range-val">0</span>
+                </label>
+                <label>Elasticity
+                    <input type="range" id="demandElasticity" min="0.15" max="4" value="1" step="0.05" list="elasTicks">
+                    <span id="demandElasticityVal" class="range-val">1.00</span>
+                    <span id="demandElasLabel" class="elas-label">Unit elastic</span>
+                </label>
+            </fieldset>
+
+            <!-- Supply -->
+            <fieldset class="fieldset-supply">
+                <legend>Supply Curve</legend>
+                <label>Shift
+                    <input type="range" id="supplyShift" min="-5" max="5" value="0" step="1">
+                    <span id="supplyShiftVal" class="range-val">0</span>
+                </label>
+                <label>Elasticity
+                    <input type="range" id="supplyElasticity" min="0.15" max="4" value="1" step="0.05" list="elasTicks">
+                    <span id="supplyElasticityVal" class="range-val">1.00</span>
+                    <span id="supplyElasLabel" class="elas-label">Unit elastic</span>
+                </label>
+            </fieldset>
+
+            <!-- Shared datalist for elasticity tick marks -->
+            <datalist id="elasTicks">
+                <option value="0.15" label="0"></option>
+                <option value="0.5"></option>
+                <option value="1" label="1"></option>
+                <option value="2"></option>
+                <option value="4" label="4"></option>
+            </datalist>
+
+            <!-- Price Controls -->
+            <fieldset>
+                <legend>Price Controls</legend>
+                <label>
+                    <input type="checkbox" id="enableFloor"> Price Floor
+                    <input type="range" id="priceFloor" min="0" max="10" value="6" step="0.1" disabled>
+                    <span id="priceFloorVal" class="range-val">6.0</span>
+                </label>
+                <label>
+                    <input type="checkbox" id="enableCeiling"> Price Ceiling
+                    <input type="range" id="priceCeiling" min="0" max="10" value="3" step="0.1" disabled>
+                    <span id="priceCeilingVal" class="range-val">3.0</span>
+                </label>
+            </fieldset>
+
+            <!-- Display toggles -->
+            <fieldset>
+                <legend>Display</legend>
+                <label><input type="checkbox" id="showSurplus" checked> Consumer Surplus</label>
+                <label><input type="checkbox" id="showLabels" checked> Curve Labels</label>
+                <label><input type="checkbox" id="showGrid" checked> Grid Lines</label>
+            </fieldset>
+
+            <button id="resetBtn" class="btn-reset">Reset All</button>
+        </div>
+    </div>
+
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB 3 — ELASTICITY                                            -->
+<!-- ============================================================ -->
+<section id="tab-elasticity" class="tab-content">
+    <h2>Elasticity Explorer</h2>
+
+    <div class="elasticity-subtabs">
+        <button class="sub-btn active" data-sub="ped">PED</button>
+        <button class="sub-btn" data-sub="pes">PES</button>
+        <button class="sub-btn" data-sub="ied">IED</button>
+        <button class="sub-btn" data-sub="ced">CED</button>
+    </div>
+
+    <!-- PED -->
+    <div id="sub-ped" class="sub-content active">
+        <div class="elasticity-layout">
+            <div class="elasticity-canvas-wrap">
+                <canvas id="pedCanvas" width="440" height="380"></canvas>
+            </div>
+            <div class="elasticity-info">
+                <h3>Price Elasticity of Demand (PED)</h3>
+                <div class="formula-display">PED = % change in Q<sub>d</sub> &divide; % change in P</div>
+                <p><strong>Always negative</strong> (law of demand), but textbooks often drop the sign.</p>
+
+                <label>Adjust PED: <strong><span id="pedValue">1.00</span></strong>
+                    <input type="range" id="pedSlider" min="0" max="5" value="1" step="0.1" list="pedTicks">
+                </label>
+                <datalist id="pedTicks">
+                    <option value="0" label="0"></option>
+                    <option value="0.5" label="0.5"></option>
+                    <option value="1" label="1"></option>
+                    <option value="2" label="2"></option>
+                    <option value="5" label="∞"></option>
+                </datalist>
+                <div class="elas-presets" data-slider="pedSlider">
+                    <label class="elas-radio"><input type="radio" name="pedPreset" value="0"> <span>Perfectly Inelastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pedPreset" value="0.5"> <span>Inelastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pedPreset" value="1" checked> <span>Unit Elastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pedPreset" value="2"> <span>Elastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pedPreset" value="5"> <span>Perfectly Elastic</span></label>
+                </div>
+
+                <table class="elas-table">
+                    <tr><th>Classification</th><th>|&epsilon;|</th><th>Revenue if P&darr;</th></tr>
+                    <tr id="ped-row-pinelastic"><td>Perfectly Inelastic</td><td>0</td><td>Falls</td></tr>
+                    <tr id="ped-row-inelastic"><td>Inelastic</td><td>0 &lt; &epsilon; &lt; 1</td><td>Falls</td></tr>
+                    <tr id="ped-row-unit"><td>Unit Elastic</td><td>&epsilon; = 1</td><td>No change</td></tr>
+                    <tr id="ped-row-elastic"><td>Elastic</td><td>&epsilon; &gt; 1</td><td>Rises</td></tr>
+                    <tr id="ped-row-pelastic"><td>Perfectly Elastic</td><td>&infin;</td><td>Falls to 0</td></tr>
+                </table>
+
+                <div class="ped-insight">
+                    <strong>Key insight:</strong> PED varies along a straight-line demand curve — elastic at the top (high P, low Q) and inelastic at the bottom (low P, high Q).
+                </div>
+
+                <h4>Four Determinants of PED</h4>
+                <ul>
+                    <li><strong>Substitutes</strong> — more substitutes → more elastic</li>
+                    <li><strong>Time</strong> — short run → inelastic; long run → elastic</li>
+                    <li><strong>Income share</strong> — larger share → more elastic</li>
+                    <li><strong>Market definition</strong> — narrower → more elastic</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- PES -->
+    <div id="sub-pes" class="sub-content">
+        <div class="elasticity-layout">
+            <div class="elasticity-canvas-wrap">
+                <canvas id="pesCanvas" width="440" height="380"></canvas>
+            </div>
+            <div class="elasticity-info">
+                <h3>Price Elasticity of Supply (PES)</h3>
+                <div class="formula-display">PES = % change in Q<sub>s</sub> &divide; % change in P</div>
+                <p><strong>Always positive</strong> (law of supply).</p>
+
+                <label>Adjust PES: <strong><span id="pesValue">1.00</span></strong>
+                    <input type="range" id="pesSlider" min="0" max="5" value="1" step="0.1" list="pesTicks">
+                </label>
+                <datalist id="pesTicks">
+                    <option value="0" label="0"></option>
+                    <option value="0.5" label="0.5"></option>
+                    <option value="1" label="1"></option>
+                    <option value="2" label="2"></option>
+                    <option value="5" label="∞"></option>
+                </datalist>
+                <div class="elas-presets" data-slider="pesSlider">
+                    <label class="elas-radio"><input type="radio" name="pesPreset" value="0"> <span>Perfectly Inelastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pesPreset" value="0.5"> <span>Inelastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pesPreset" value="1" checked> <span>Unit Elastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pesPreset" value="2"> <span>Elastic</span></label>
+                    <label class="elas-radio"><input type="radio" name="pesPreset" value="5"> <span>Perfectly Elastic</span></label>
+                </div>
+
+                <table class="elas-table">
+                    <tr><th>Classification</th><th>PES</th><th>Meaning</th></tr>
+                    <tr id="pes-row-pinelastic"><td>Perfectly Inelastic</td><td>0</td><td>Supply constant (e.g. COVID disruptions)</td></tr>
+                    <tr id="pes-row-inelastic"><td>Inelastic</td><td>0 &lt; PES &lt; 1</td><td>Q<sub>s</sub> changes less than P</td></tr>
+                    <tr id="pes-row-unit"><td>Unit Elastic</td><td>PES = 1</td><td>Proportional change</td></tr>
+                    <tr id="pes-row-elastic"><td>Elastic</td><td>PES &gt; 1</td><td>Q<sub>s</sub> changes more than P</td></tr>
+                    <tr id="pes-row-pelastic"><td>Perfectly Elastic</td><td>&infin;</td><td>Price stays constant</td></tr>
+                </table>
+
+                <h4>Two Determinants of PES</h4>
+                <ul>
+                    <li><strong>Number of firms</strong> — more firms → more elastic</li>
+                    <li><strong>Time period</strong> — long run → more elastic (all factors adjustable)</li>
+                </ul>
+                <div class="ped-insight">
+                    <strong>Irish example:</strong> Housing PES ≈ 0.9 (inelastic). Dublin even more inelastic (0.75). Counties outside Dublin more elastic (up to 2.5).
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IED -->
+    <div id="sub-ied" class="sub-content">
+        <div class="elasticity-layout">
+            <div class="elasticity-canvas-wrap">
+                <canvas id="iedCanvas" width="440" height="380"></canvas>
+            </div>
+            <div class="elasticity-info">
+                <h3>Income Elasticity of Demand (IED)</h3>
+                <div class="formula-display">IED = % change in Q<sub>d</sub> &divide; % change in Income</div>
+
+                <label>Adjust IED: <strong><span id="iedValue">1.00</span></strong>
+                    <input type="range" id="iedSlider" min="-2" max="3" value="1" step="0.1">
+                </label>
+
+                <table class="elas-table">
+                    <tr><th>Good Type</th><th>IED</th><th>Explanation</th></tr>
+                    <tr id="ied-row-luxury"><td>Normal — Luxury</td><td>IED &gt; 1</td><td>Demand rises faster than income</td></tr>
+                    <tr id="ied-row-necessity"><td>Normal — Necessity</td><td>0 &lt; IED &lt; 1</td><td>Demand rises slower than income</td></tr>
+                    <tr id="ied-row-inferior"><td>Inferior Good</td><td>IED &lt; 0</td><td>Demand falls as income rises</td></tr>
+                </table>
+
+                <div class="ped-insight">
+                    <strong>Irish context:</strong> Housing is the only luxury (IED = 1.81). Food, clothing, durables, health, recreation are all necessities. Historically, clothing and durables were luxuries — the Celtic Tiger shifted them to necessities.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CED -->
+    <div id="sub-ced" class="sub-content">
+        <div class="elasticity-layout">
+            <div class="elasticity-canvas-wrap">
+                <canvas id="cedCanvas" width="440" height="380"></canvas>
+            </div>
+            <div class="elasticity-info">
+                <h3>Cross-Price Elasticity of Demand (CED)</h3>
+                <div class="formula-display">CED = % change in Q<sub>d</sub> of X &divide; % change in P of Y</div>
+
+                <label>Adjust CED: <strong><span id="cedValue">0.50</span></strong>
+                    <input type="range" id="cedSlider" min="-3" max="3" value="0.5" step="0.1">
+                </label>
+
+                <table class="elas-table">
+                    <tr><th>Relationship</th><th>CED</th><th>Example</th></tr>
+                    <tr id="ced-row-substitute"><td>Substitutes</td><td>Positive (0 to +&infin;)</td><td>Tea &amp; coffee — coffee P↑ → tea demand ↑</td></tr>
+                    <tr id="ced-row-complement"><td>Complements</td><td>Negative (0 to −&infin;)</td><td>Cars &amp; fuel — car P↑ → fuel demand ↓</td></tr>
+                    <tr id="ced-row-unrelated"><td>Unrelated</td><td>CED ≈ 0</td><td>No relationship</td></tr>
+                </table>
+
+                <div class="ped-insight">
+                    <strong>Irish example:</strong> 10% lager price ↑ → 2.8% switch to stout + 1.6% switch to cider (Murphy's/Beamish merger case).
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB 4 — GOOD TYPES                                            -->
+<!-- ============================================================ -->
+<section id="tab-goods" class="tab-content">
+    <h2>Types of Goods</h2>
+    <p class="section-intro">Understanding how different types of goods respond to price and income changes is key to demand analysis.</p>
+
+    <div class="goods-grid">
+
+        <!-- Normal Goods -->
+        <div class="good-card">
+            <div class="good-card-header normal">Normal Goods</div>
+            <div class="good-card-body">
+                <canvas class="good-canvas" data-good="normal" width="260" height="180"></canvas>
+                <p class="good-def">Demand <strong>increases</strong> when income rises, <strong>decreases</strong> when income falls.</p>
+                <div class="good-detail">
+                    <span class="good-label">IED:</span> Positive (IED &gt; 0)
+                </div>
+                <div class="good-detail">
+                    <span class="good-label">Sub-types:</span>
+                    <ul>
+                        <li><strong>Necessities</strong> (0 &lt; IED &lt; 1) — food, clothing</li>
+                        <li><strong>Luxuries</strong> (IED &gt; 1) — housing (IED = 1.81 in Ireland)</li>
+                    </ul>
+                </div>
+                <div class="good-detail">
+                    <span class="good-label">Demand curve:</span> Standard downward slope. Shifts right when income ↑.
+                </div>
+                <div class="good-example">Most goods are normal goods.</div>
+            </div>
+        </div>
+
+        <!-- Inferior Goods -->
+        <div class="good-card">
+            <div class="good-card-header inferior">Inferior Goods</div>
+            <div class="good-card-body">
+                <canvas class="good-canvas" data-good="inferior" width="260" height="180"></canvas>
+                <p class="good-def">Demand <strong>decreases</strong> when income rises, <strong>increases</strong> when income falls.</p>
+                <div class="good-detail">
+                    <span class="good-label">IED:</span> Negative (IED &lt; 0)
+                </div>
+                <div class="good-detail">
+                    <span class="good-label">Demand curve:</span> Standard downward slope, but shifts <em>left</em> when income ↑.
+                </div>
+                <div class="good-example">
+                    <strong>Example:</strong> Supermarket own-brand products — during the Celtic Tiger boom, demand for these fell as consumers switched to premium brands.
+                </div>
+            </div>
+        </div>
+
+        <!-- Giffen Goods -->
+        <div class="good-card">
+            <div class="good-card-header giffen">Giffen Goods</div>
+            <div class="good-card-body">
+                <canvas class="good-canvas" data-good="giffen" width="260" height="180"></canvas>
+                <p class="good-def">Exception to the Law of Demand: demand <strong>rises</strong> as price rises.</p>
+                <div class="good-detail">
+                    <span class="good-label">Why?</span> For basic staples in developing economies, a price rise makes consumers too poor to afford alternatives → they buy <em>more</em> of the staple.
+                </div>
+                <div class="good-detail">
+                    <span class="good-label">Demand curve:</span> <strong>Upward sloping</strong> (over some range).
+                </div>
+                <div class="good-example">
+                    <strong>Example:</strong> Rice in some developing economies; potatoes in pre-famine Ireland.
+                </div>
+            </div>
+        </div>
+
+        <!-- Veblen Goods -->
+        <div class="good-card">
+            <div class="good-card-header veblen">Veblen Goods</div>
+            <div class="good-card-body">
+                <canvas class="good-canvas" data-good="veblen" width="260" height="180"></canvas>
+                <p class="good-def">Exception to the Law of Demand: demand <strong>rises</strong> as price rises due to <em>conspicuous consumption</em>.</p>
+                <div class="good-detail">
+                    <span class="good-label">Why?</span> Higher prices signal status and exclusivity → increased demand.
+                </div>
+                <div class="good-detail">
+                    <span class="good-label">Demand curve:</span> <strong>Upward sloping</strong> (over some range).
+                </div>
+                <div class="good-example">
+                    <strong>Example:</strong> Louis Vuitton, Rolex, designer fashion — price is part of the appeal.
+                </div>
+            </div>
+        </div>
+
+        <!-- Substitutes -->
+        <div class="good-card">
+            <div class="good-card-header substitute">Substitutes</div>
+            <div class="good-card-body">
+                <canvas class="good-canvas" data-good="substitute" width="260" height="180"></canvas>
+                <p class="good-def">Rival products — can be used in place of each other.</p>
+                <div class="good-detail">
+                    <span class="good-label">CED:</span> Positive — when substitute price ↑, demand for original ↑.
+                </div>
+                <div class="good-detail">
+                    <span class="good-label">Effect:</span> Substitute price rises → demand for your good shifts <em>right</em>.
+                </div>
+                <div class="good-example">
+                    <strong>Examples:</strong> Coke vs Pepsi, BMW vs Mercedes, Netflix vs Prime.
+                </div>
+            </div>
+        </div>
+
+        <!-- Complements -->
+        <div class="good-card">
+            <div class="good-card-header complement">Complements</div>
+            <div class="good-card-body">
+                <canvas class="good-canvas" data-good="complement" width="260" height="180"></canvas>
+                <p class="good-def">Products purchased together — demand is linked.</p>
+                <div class="good-detail">
+                    <span class="good-label">CED:</span> Negative — when complement price ↑, demand for both ↓.
+                </div>
+                <div class="good-detail">
+                    <span class="good-label">Effect:</span> Complement price rises → demand for your good shifts <em>left</em>.
+                </div>
+                <div class="good-example">
+                    <strong>Examples:</strong> Cars &amp; fuel, mortgages &amp; houses, WiFi &amp; computers, tennis racquets &amp; tennis balls.
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB 5 — FORMULAE                                              -->
+<!-- ============================================================ -->
+<section id="tab-formulae" class="tab-content">
+    <h2>Key Formulae</h2>
+    <p class="section-intro">Quick reference for all the formulae you need for your exam.</p>
+
+    <div class="formulae-grid">
+
+        <div class="formula-card">
+            <h4>Price Elasticity of Demand (PED)</h4>
+            <div class="formula-big">PED = <span class="frac"><span class="num">% &Delta; Q<sub>d</sub></span><span class="den">% &Delta; P</span></span></div>
+            <p>Always negative. Drop the sign for classification.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Income Elasticity of Demand (IED)</h4>
+            <div class="formula-big">IED = <span class="frac"><span class="num">% &Delta; Q<sub>d</sub></span><span class="den">% &Delta; Income</span></span></div>
+            <p>Positive → normal good. Negative → inferior good.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Cross-Price Elasticity (CED)</h4>
+            <div class="formula-big">CED = <span class="frac"><span class="num">% &Delta; Q<sub>d</sub> of X</span><span class="den">% &Delta; P of Y</span></span></div>
+            <p>Positive → substitutes. Negative → complements.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Price Elasticity of Supply (PES)</h4>
+            <div class="formula-big">PES = <span class="frac"><span class="num">% &Delta; Q<sub>s</sub></span><span class="den">% &Delta; P</span></span></div>
+            <p>Always positive. Determinants: number of firms, time period.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Total Revenue</h4>
+            <div class="formula-big">TR = P &times; Q</div>
+            <p>Elastic → lower P to ↑ TR. Inelastic → raise P to ↑ TR. Maximised at unit elasticity.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Consumer Surplus</h4>
+            <div class="formula-big">CS = WTP &minus; P<sub>actual</sub></div>
+            <p>Max willingness to pay minus the actual price paid.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Total Cost</h4>
+            <div class="formula-big">TC = FC + VC</div>
+            <p>Fixed costs (constant) + Variable costs (change with output).</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Average Costs</h4>
+            <div class="formula-big">
+                ATC = <span class="frac"><span class="num">TC</span><span class="den">Q</span></span> &nbsp;&nbsp;
+                AVC = <span class="frac"><span class="num">VC</span><span class="den">Q</span></span> &nbsp;&nbsp;
+                AFC = <span class="frac"><span class="num">FC</span><span class="den">Q</span></span>
+            </div>
+            <p>AFC always declines as output rises.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Marginal Cost</h4>
+            <div class="formula-big">MC = <span class="frac"><span class="num">&Delta; TC</span><span class="den">&Delta; Q</span></span></div>
+            <p>Cost of producing one more unit. MC mirrors Marginal Product.</p>
+        </div>
+
+        <div class="formula-card">
+            <h4>Marginal Product</h4>
+            <div class="formula-big">MP = <span class="frac"><span class="num">&Delta; Total Product</span><span class="den">&Delta; Labour</span></span></div>
+            <p>MP ↑ → MC ↓. MP ↓ → MC ↑ (Law of Diminishing Returns).</p>
+        </div>
+
+    </div>
+</section>
+
+<footer>
+    <p>EasyEcon — Built for EC1212 Economics of Business 1 · Exam: 23 Feb 2026</p>
+</footer>
+
+<script src="app.js"></script>
+
+</body>
+</html>
