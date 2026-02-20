@@ -24,6 +24,12 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         } else if (tab === 'goods') {
             document.querySelectorAll('.good-canvas').forEach(c => setupHiDPICanvas(c));
             drawGoodTypeGraphs();
+        } else if (tab === 'firms') {
+            ['productionCanvas','costsCanvas','profitCanvas','longrunCanvas'].forEach(id => {
+                const c = document.getElementById(id);
+                if (c) setupHiDPICanvas(c);
+            });
+            drawFirmsGraphs();
         }
     });
 });
@@ -92,7 +98,8 @@ function getLogicalSize(canvas) {
 
 // Set up all canvases on load and resize
 function setupAllCanvases() {
-    ['mainCanvas', 'pedCanvas', 'pesCanvas', 'iedCanvas', 'cedCanvas'].forEach(id => {
+    ['mainCanvas', 'pedCanvas', 'pesCanvas', 'iedCanvas', 'cedCanvas',
+     'productionCanvas', 'costsCanvas', 'profitCanvas', 'longrunCanvas'].forEach(id => {
         const c = document.getElementById(id);
         if (c) setupHiDPICanvas(c);
     });
@@ -105,6 +112,7 @@ window.addEventListener('resize', () => {
     updateMainGraph();
     drawElasticityGraphs();
     drawGoodTypeGraphs();
+    drawFirmsGraphs();
 });
 
 // ─── GRAPH ENGINE ─────────────────────────────────────────
@@ -1345,8 +1353,594 @@ document.querySelectorAll('.elas-presets input[type="radio"]').forEach(radio => 
     });
 });
 
-// ─── INIT ─────────────────────────────────────────────────
+// ─── FIRMS IN THE MARKETPLACE ─────────────────────────────
+
+// ── Firms sub-tab navigation ──
+document.querySelectorAll('.firms-sub-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.firms-sub-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.firms-sub-content').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('firms-sub-' + btn.dataset.firmsSub).classList.add('active');
+        ['productionCanvas','costsCanvas','profitCanvas','longrunCanvas'].forEach(id => {
+            const c = document.getElementById(id);
+            if (c) setupHiDPICanvas(c);
+        });
+        drawFirmsGraphs();
+    });
+});
+
+// ── Production model ──
+// TP = K^0.3 * (4L + 1.5L² − 0.12L³)  — cubic S-curve:
+// MP first increases (specialisation), then peaks, then decreases (diminishing returns).
+function calcProduction(K) {
+    const rows = [];
+    const kFactor = Math.pow(K, 0.3);
+    for (let L = 0; L <= 12; L++) {
+        const rawTP = 4 * L + 1.5 * L * L - 0.12 * L * L * L;
+        const TP = Math.max(0, Math.round(kFactor * rawTP * 10) / 10);
+        let MP = 0, AP = 0;
+        if (L > 0) {
+            const prevRaw = 4 * (L - 1) + 1.5 * (L - 1) * (L - 1) - 0.12 * (L - 1) * (L - 1) * (L - 1);
+            const prevTP = Math.max(0, Math.round(kFactor * prevRaw * 10) / 10);
+            MP = Math.round((TP - prevTP) * 10) / 10;
+            AP = Math.round((TP / L) * 10) / 10;
+        }
+        rows.push({ L, TP, MP, AP });
+    }
+    return rows;
+}
+
+function drawProductionGraph() {
+    const canvas = document.getElementById('productionCanvas');
+    if (!canvas) return;
+    const K = +document.getElementById('capitalSlider').value;
+    document.getElementById('capitalVal').textContent = K;
+
+    const rows = calcProduction(K);
+    // Fill table
+    const tbody = document.querySelector('#productionTable tbody');
+    tbody.innerHTML = '';
+    let maxMP = 0, maxMPL = 0;
+    rows.forEach(r => { if (r.MP > maxMP) { maxMP = r.MP; maxMPL = r.L; } });
+    rows.forEach(r => {
+        const tr = document.createElement('tr');
+        if (r.MP === maxMP && r.L === maxMPL) tr.classList.add('highlight-row');
+        tr.innerHTML = `<td>${r.L}</td><td>${r.TP.toFixed(1)}</td><td>${r.L === 0 ? '—' : r.MP.toFixed(1)}</td><td>${r.L === 0 ? '—' : r.AP.toFixed(1)}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    // Draw graph
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const { width: W, height: H } = getLogicalSize(canvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 30, right: 30, bottom: 50, left: 55 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+    const maxL = 12;
+    const maxTP = Math.max(...rows.map(r => r.TP)) * 1.1 || 120;
+
+    function mx(L) { return pad.left + (L / maxL) * plotW; }
+    function my(v, maxV) { return pad.top + (1 - v / maxV) * plotH; }
+
+    // Grid
+    ctx.strokeStyle = '#e8e8ee'; ctx.lineWidth = 0.7;
+    for (let i = 0; i <= maxL; i += 2) {
+        ctx.beginPath(); ctx.moveTo(mx(i), pad.top); ctx.lineTo(mx(i), pad.top + plotH); ctx.stroke();
+    }
+    for (let i = 0; i <= 5; i++) {
+        const y = pad.top + (i / 5) * plotH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+    ctx.fillStyle = '#555'; ctx.font = '600 12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Labour (L)', pad.left + plotW / 2, H - 8);
+    ctx.save(); ctx.translate(13, pad.top + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('Output', 0, 0); ctx.restore();
+
+    // Tick labels on X axis
+    ctx.font = '10px system-ui'; ctx.fillStyle = '#888'; ctx.textAlign = 'center';
+    for (let i = 0; i <= maxL; i += 2) ctx.fillText(i, mx(i), pad.top + plotH + 15);
+    // Tick labels on Y axis
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 5; i++) {
+        const v = Math.round((maxTP / 5) * i);
+        ctx.fillText(v, pad.left - 6, my(v, maxTP) + 4);
+    }
+
+    // TP curve (blue)
+    ctx.strokeStyle = '#4361ee'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    rows.forEach((r, i) => {
+        const x = mx(r.L), y = my(r.TP, maxTP);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // MP curve (orange) — scaled to same axis for overlay (dashed)
+    const maxMP2 = Math.max(...rows.map(r => r.MP)) * 1.2 || 20;
+    ctx.strokeStyle = '#f77f00'; ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
+    ctx.beginPath();
+    let startedMP = false;
+    rows.forEach(r => {
+        if (r.L === 0) return;
+        const x = mx(r.L), y = my(r.MP, maxMP2);
+        if (y < pad.top || y > pad.top + plotH) { startedMP = false; return; }
+        if (!startedMP) { ctx.moveTo(x, y); startedMP = true; } else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // AP curve (green, dashed)
+    ctx.strokeStyle = '#06d6a0'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    let startedAP = false;
+    rows.forEach(r => {
+        if (r.L === 0) return;
+        const x = mx(r.L), y = my(r.AP, maxMP2);
+        if (y < pad.top || y > pad.top + plotH) { startedAP = false; return; }
+        if (!startedAP) { ctx.moveTo(x, y); startedAP = true; } else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Labels
+    ctx.font = 'bold 11px system-ui';
+    ctx.fillStyle = '#4361ee'; ctx.textAlign = 'left';
+    ctx.fillText('TP', mx(maxL) - 20, my(rows[rows.length - 1].TP, maxTP) - 8);
+    ctx.fillStyle = '#f77f00';
+    ctx.fillText('MP', mx(maxMPL) + 4, my(maxMP, maxMP2) - 6);
+    ctx.fillStyle = '#06d6a0';
+    const apPeak = rows.reduce((best, r) => (r.AP > best.AP ? r : best), rows[0]);
+    ctx.fillText('AP', mx(apPeak.L) + 4, my(apPeak.AP, maxMP2) - 6);
+
+    // Vertical dashed line at MP peak (start of diminishing returns)
+    if (maxMPL > 0) {
+        ctx.setLineDash([4, 3]); ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(mx(maxMPL), pad.top); ctx.lineTo(mx(maxMPL), pad.top + plotH); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#888'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('DMR begins', mx(maxMPL), pad.top + 14);
+    }
+}
+
+// ── Cost model ──
+// VC = vcRate * Q + 0.08 * vcRate * Q^2 / K  (U-shaped, diminishing returns)
+function calcCosts(FC, vcRate, maxQ) {
+    const rows = [];
+    for (let Q = 0; Q <= maxQ; Q++) {
+        const VC = Math.round((vcRate * Q + 0.08 * vcRate * Q * Q) * 10) / 10;
+        const TC = FC + VC;
+        const AFC = Q === 0 ? null : Math.round((FC / Q) * 10) / 10;
+        const AVC = Q === 0 ? null : Math.round((VC / Q) * 10) / 10;
+        const ATC = Q === 0 ? null : Math.round((TC / Q) * 10) / 10;
+        let MC = null;
+        if (Q > 0) {
+            const prevVC = Math.round((vcRate * (Q - 1) + 0.08 * vcRate * (Q - 1) * (Q - 1)) * 10) / 10;
+            MC = Math.round((VC - prevVC) * 10) / 10;
+        }
+        rows.push({ Q, FC, VC, TC, AFC, AVC, ATC, MC });
+    }
+    return rows;
+}
+
+function drawCostsGraph() {
+    const canvas = document.getElementById('costsCanvas');
+    if (!canvas) return;
+    const FC = +document.getElementById('fcSlider').value;
+    const vcRate = +document.getElementById('vcRateSlider').value;
+    document.getElementById('fcVal').textContent = FC;
+    document.getElementById('vcRateVal').textContent = vcRate;
+
+    const showTC = document.getElementById('showTC').checked;
+    const showATCLines = document.getElementById('showATC').checked;
+    const showMCLine = document.getElementById('showMC').checked;
+
+    const maxQ = 20;
+    const rows = calcCosts(FC, vcRate, maxQ);
+
+    // Fill table (show subset)
+    const tbody = document.querySelector('#costsTable tbody');
+    tbody.innerHTML = '';
+    rows.filter(r => r.Q % 2 === 0 || r.Q <= 6).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.Q}</td><td>${r.FC}</td><td>${r.VC.toFixed(1)}</td><td>${r.TC.toFixed(1)}</td><td>${r.AFC !== null ? r.AFC.toFixed(1) : '—'}</td><td>${r.AVC !== null ? r.AVC.toFixed(1) : '—'}</td><td>${r.ATC !== null ? r.ATC.toFixed(1) : '—'}</td><td>${r.MC !== null ? r.MC.toFixed(1) : '—'}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    // Draw
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const { width: W, height: H } = getLogicalSize(canvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 30, right: 30, bottom: 50, left: 60 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    // Determine Y scale — use TC as upper bound or ATC*2 if showing per-unit curves
+    const maxTC = Math.max(...rows.map(r => r.TC));
+    const maxATC = Math.max(...rows.filter(r => r.ATC !== null).map(r => r.ATC));
+    const maxMCV = Math.max(...rows.filter(r => r.MC !== null).map(r => r.MC));
+    const maxY = showTC ? maxTC * 1.1 : Math.max(maxATC, maxMCV) * 1.2;
+
+    function mx(Q) { return pad.left + (Q / maxQ) * plotW; }
+    function my(v) { return pad.top + (1 - v / maxY) * plotH; }
+
+    // Grid
+    ctx.strokeStyle = '#e8e8ee'; ctx.lineWidth = 0.7;
+    for (let i = 0; i <= maxQ; i += 4) {
+        ctx.beginPath(); ctx.moveTo(mx(i), pad.top); ctx.lineTo(mx(i), pad.top + plotH); ctx.stroke();
+    }
+    for (let i = 0; i <= 5; i++) {
+        const y = pad.top + (i / 5) * plotH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+    ctx.fillStyle = '#555'; ctx.font = '600 12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Quantity (Q)', pad.left + plotW / 2, H - 8);
+    ctx.save(); ctx.translate(13, pad.top + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('Cost (€)', 0, 0); ctx.restore();
+
+    ctx.font = '10px system-ui'; ctx.fillStyle = '#888'; ctx.textAlign = 'center';
+    for (let i = 0; i <= maxQ; i += 4) ctx.fillText(i, mx(i), pad.top + plotH + 15);
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 5; i++) {
+        const v = Math.round((maxY / 5) * i);
+        ctx.fillText(v, pad.left - 6, my(v) + 4);
+    }
+
+    function drawCurve(dataFn, color, dash) {
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash || []);
+        ctx.beginPath();
+        let started = false;
+        rows.forEach(r => {
+            const v = dataFn(r);
+            if (v === null || v === undefined) { started = false; return; }
+            const y = my(v);
+            if (y < pad.top - 10 || y > pad.top + plotH + 10) { started = false; return; }
+            if (!started) { ctx.moveTo(mx(r.Q), y); started = true; } else ctx.lineTo(mx(r.Q), y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    if (showTC) {
+        drawCurve(r => r.FC, '#888', [4, 4]);       // FC — grey dashed flat
+        drawCurve(r => r.VC, '#f77f00', []);          // VC — orange
+        drawCurve(r => r.TC, '#4361ee', []);           // TC — blue
+    }
+    if (showATCLines) {
+        drawCurve(r => r.AFC, '#888', [3, 3]);         // AFC — grey dotted
+        drawCurve(r => r.AVC, '#f77f00', []);          // AVC — orange
+        drawCurve(r => r.ATC, '#4361ee', []);          // ATC — blue
+    }
+    if (showMCLine) {
+        drawCurve(r => r.MC, '#ef476f', []);           // MC — red
+    }
+
+    // Labels at right edge
+    ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'left';
+    const lastRow = rows[rows.length - 1];
+    if (showTC) {
+        const fcY = my(FC); if (fcY >= pad.top && fcY <= pad.top + plotH) { ctx.fillStyle = '#888'; ctx.fillText('FC', pad.left + plotW + 2, fcY + 4); }
+        const vcY = my(lastRow.VC); if (vcY >= pad.top) { ctx.fillStyle = '#f77f00'; ctx.fillText('VC', pad.left + plotW + 2, vcY + 4); }
+        const tcY = my(lastRow.TC); if (tcY >= pad.top) { ctx.fillStyle = '#4361ee'; ctx.fillText('TC', pad.left + plotW + 2, tcY + 4); }
+    }
+    if (showATCLines) {
+        const afcY = my(lastRow.AFC); if (afcY && afcY >= pad.top) { ctx.fillStyle = '#888'; ctx.fillText('AFC', mx(maxQ - 1), afcY - 6); }
+        const avcY = my(lastRow.AVC); if (avcY && avcY >= pad.top) { ctx.fillStyle = '#f77f00'; ctx.fillText('AVC', mx(maxQ - 1), avcY - 6); }
+        const atcY = my(lastRow.ATC); if (atcY && atcY >= pad.top) { ctx.fillStyle = '#4361ee'; ctx.fillText('ATC', mx(maxQ - 1), atcY - 6); }
+    }
+    if (showMCLine) {
+        const mcY = my(lastRow.MC); if (mcY && mcY >= pad.top) { ctx.fillStyle = '#ef476f'; ctx.fillText('MC', mx(maxQ - 1), mcY - 6); }
+    }
+}
+
+// ── Revenue & Profit model ──
+function drawProfitGraph() {
+    const canvas = document.getElementById('profitCanvas');
+    if (!canvas) return;
+    const P = +document.getElementById('mktPriceSlider').value;
+    const FC = +document.getElementById('profitFcSlider').value;
+    const vcRate = +document.getElementById('profitVcSlider').value;
+    document.getElementById('mktPriceVal').textContent = P;
+    document.getElementById('profitFcVal').textContent = FC;
+    document.getElementById('profitVcVal').textContent = vcRate;
+
+    const maxQ = 20;
+    const rows = calcCosts(FC, vcRate, maxQ).map(r => ({
+        ...r,
+        TR: Math.round(P * r.Q * 10) / 10,
+        MR: P,  // Perfect competition: MR = P
+        Profit: Math.round((P * r.Q - r.TC) * 10) / 10
+    }));
+
+    // Find profit-maximising Q (where MC closest to P from below)
+    let profitMaxQ = 0;
+    let maxProfit = -Infinity;
+    rows.forEach(r => { if (r.Profit > maxProfit) { maxProfit = r.Profit; profitMaxQ = r.Q; } });
+
+    // Summary
+    const summaryEl = document.getElementById('profit-summary');
+    const profitRow = rows[profitMaxQ];
+    const profitAmt = profitRow.Profit;
+    if (profitAmt > 0.5) {
+        summaryEl.innerHTML = `<strong>Supernormal profit</strong> at Q = ${profitMaxQ}: TR = €${profitRow.TR.toFixed(0)}, TC = €${profitRow.TC.toFixed(0)}, Profit = <span style="color:#166534">+€${profitAmt.toFixed(0)}</span>. The firm earns above-normal returns. In the long run (perfect competition) new firms will enter until profit is competed away.`;
+    } else if (profitAmt < -0.5) {
+        summaryEl.innerHTML = `<strong>Loss-making</strong> at best Q = ${profitMaxQ}: TR = €${profitRow.TR.toFixed(0)}, TC = €${profitRow.TC.toFixed(0)}, Loss = <span style="color:#991b1b">€${profitAmt.toFixed(0)}</span>. The firm covers variable costs but not fixed costs. It may continue in short run but exit in long run.`;
+    } else {
+        summaryEl.innerHTML = `<strong>Normal profit</strong> at Q = ${profitMaxQ}: TR ≈ TC = €${profitRow.TC.toFixed(0)}. Zero economic profit — the firm covers all opportunity costs and stays in the market.`;
+    }
+
+    // Draw
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const { width: W, height: H } = getLogicalSize(canvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 30, right: 50, bottom: 50, left: 60 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    const maxTR = Math.max(...rows.map(r => r.TR));
+    const maxTC = Math.max(...rows.map(r => r.TC));
+    const maxY = Math.max(maxTR, maxTC) * 1.1;
+
+    function mx(Q) { return pad.left + (Q / maxQ) * plotW; }
+    function my(v) { return pad.top + (1 - v / maxY) * plotH; }
+
+    // Grid
+    ctx.strokeStyle = '#e8e8ee'; ctx.lineWidth = 0.7;
+    for (let i = 0; i <= maxQ; i += 4) { ctx.beginPath(); ctx.moveTo(mx(i), pad.top); ctx.lineTo(mx(i), pad.top + plotH); ctx.stroke(); }
+    for (let i = 0; i <= 5; i++) { const y = pad.top + (i / 5) * plotH; ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke(); }
+
+    // Profit / Loss shading
+    rows.forEach((r, i) => {
+        if (i === 0) return;
+        const x0 = mx(r.Q - 1), x1 = mx(r.Q);
+        const trY0 = my(rows[i - 1].TR), tcY0 = my(rows[i - 1].TC);
+        const trY1 = my(r.TR), tcY1 = my(r.TC);
+        ctx.beginPath();
+        ctx.moveTo(x0, trY0); ctx.lineTo(x1, trY1); ctx.lineTo(x1, tcY1); ctx.lineTo(x0, tcY0); ctx.closePath();
+        ctx.fillStyle = r.Profit >= 0 ? 'rgba(6,214,160,0.15)' : 'rgba(239,71,111,0.12)';
+        ctx.fill();
+    });
+
+    // Axes
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+    ctx.fillStyle = '#555'; ctx.font = '600 12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Quantity (Q)', pad.left + plotW / 2, H - 8);
+    ctx.save(); ctx.translate(13, pad.top + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('Revenue / Cost (€)', 0, 0); ctx.restore();
+
+    ctx.font = '10px system-ui'; ctx.fillStyle = '#888'; ctx.textAlign = 'center';
+    for (let i = 0; i <= maxQ; i += 4) ctx.fillText(i, mx(i), pad.top + plotH + 15);
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 5; i++) {
+        const v = Math.round((maxY / 5) * i);
+        ctx.fillText(v, pad.left - 6, my(v) + 4);
+    }
+
+    // TR line (green)
+    ctx.strokeStyle = '#06d6a0'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+    ctx.beginPath();
+    rows.forEach((r, i) => { const pt = { x: mx(r.Q), y: my(r.TR) }; if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y); });
+    ctx.stroke();
+
+    // TC curve (blue)
+    ctx.strokeStyle = '#4361ee'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    rows.forEach((r, i) => { const pt = { x: mx(r.Q), y: my(r.TC) }; if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y); });
+    ctx.stroke();
+
+    // Profit-max point marker
+    const pmRow = rows[profitMaxQ];
+    const pmX = mx(profitMaxQ), pmTRY = my(pmRow.TR), pmTCY = my(pmRow.TC);
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pmX, pad.top); ctx.lineTo(pmX, pad.top + plotH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath(); ctx.arc(pmX, pmTRY, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(pmX, pmTCY, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Labels
+    ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#06d6a0'; ctx.fillText('TR', pad.left + plotW + 4, my(rows[rows.length - 1].TR) + 4);
+    ctx.fillStyle = '#4361ee'; ctx.fillText('TC', pad.left + plotW + 4, my(rows[rows.length - 1].TC) + 4);
+    ctx.fillStyle = '#c49000'; ctx.textAlign = 'center';
+    ctx.fillText('π-max Q=' + profitMaxQ, pmX, pad.top + 16);
+}
+
+// ── Long-Run / Economies of Scale model ──
+function drawLongRunGraph() {
+    const canvas = document.getElementById('longrunCanvas');
+    if (!canvas) return;
+    const scale = +document.getElementById('scaleSlider').value;
+    document.getElementById('scaleVal').textContent = scale.toFixed(2);
+
+    // Determine region
+    const insightEl = document.getElementById('scale-insight');
+    document.getElementById('lr-row-eos').classList.remove('highlight-row');
+    document.getElementById('lr-row-cos').classList.remove('highlight-row');
+    document.getElementById('lr-row-dos').classList.remove('highlight-row');
+    if (scale < 0.85) {
+        insightEl.innerHTML = '<strong>Economies of Scale:</strong> At this scale, LRATC is falling — doubling inputs more than doubles output. The firm benefits from specialisation, bulk buying, and spreading fixed costs.';
+        document.getElementById('lr-row-eos').classList.add('highlight-row');
+    } else if (scale <= 1.25) {
+        insightEl.innerHTML = '<strong>Constant Returns to Scale:</strong> Doubling inputs roughly doubles output. Costs and output grow proportionally — the minimum efficient scale (MES).';
+        document.getElementById('lr-row-cos').classList.add('highlight-row');
+    } else {
+        insightEl.innerHTML = '<strong>Diseconomies of Scale:</strong> The firm has grown too large — management becomes harder, communication breaks down, workers feel less motivated. LRATC is rising.';
+        document.getElementById('lr-row-dos').classList.add('highlight-row');
+    }
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const { width: W, height: H } = getLogicalSize(canvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top: 30, right: 30, bottom: 50, left: 60 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+    const maxQ = 100;
+    const maxCost = 120;
+
+    // LRATC shape: U-shaped with minimum at Q=50 → LRATC = 30 + 0.012*(Q-50)^2
+    function lratc(Q) { return 30 + 0.012 * Math.pow(Q - 50, 2); }
+
+    // Short-run ATC curves for selected scale
+    // Each SRATC is centred at a different Q with scale affecting FC and VC
+    function sratcFactory(centreQ, fc, vcBase) {
+        return Q => fc / Q + vcBase + 0.015 * Math.pow(Q - centreQ, 2);
+    }
+
+    const centres = [15, 30, 50, 70, 85];
+    const srParams = [
+        { fc: 60,  vc: 50 },
+        { fc: 80,  vc: 38 },
+        { fc: 100, vc: 30 },
+        { fc: 80,  vc: 38 },
+        { fc: 60,  vc: 50 },
+    ];
+
+    function mx(Q) { return pad.left + (Q / maxQ) * plotW; }
+    function my(v) { return pad.top + (1 - v / maxCost) * plotH; }
+
+    // Grid
+    ctx.strokeStyle = '#e8e8ee'; ctx.lineWidth = 0.7;
+    for (let i = 0; i <= maxQ; i += 20) { ctx.beginPath(); ctx.moveTo(mx(i), pad.top); ctx.lineTo(mx(i), pad.top + plotH); ctx.stroke(); }
+    for (let i = 0; i <= 6; i++) { const y = pad.top + (i / 6) * plotH; ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke(); }
+
+    // Axes
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+    ctx.fillStyle = '#555'; ctx.font = '600 12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Output (Q)', pad.left + plotW / 2, H - 8);
+    ctx.save(); ctx.translate(13, pad.top + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('Average Cost (€)', 0, 0); ctx.restore();
+
+    ctx.font = '10px system-ui'; ctx.fillStyle = '#888'; ctx.textAlign = 'center';
+    for (let i = 0; i <= maxQ; i += 20) ctx.fillText(i, mx(i), pad.top + plotH + 15);
+    ctx.textAlign = 'right';
+    [0, 30, 60, 90, 120].forEach(v => ctx.fillText(v, pad.left - 6, my(v) + 4));
+
+    // Draw SRATC curves (light grey)
+    centres.forEach((c, idx) => {
+        const fn = sratcFactory(c, srParams[idx].fc, srParams[idx].vc);
+        ctx.strokeStyle = 'rgba(100,100,200,0.2)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        let started = false;
+        for (let Q = 1; Q <= maxQ; Q++) {
+            const v = fn(Q);
+            if (v < 0 || v > maxCost) { started = false; continue; }
+            const y = my(v);
+            if (!started) { ctx.moveTo(mx(Q), y); started = true; } else ctx.lineTo(mx(Q), y);
+        }
+        ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Mark which SRATC the scale slider represents
+    const scaleIdx = Math.min(4, Math.floor((scale - 0.3) / (2.5 - 0.3) * centres.length));
+    const activeCentre = centres[scaleIdx];
+    const activeParams = srParams[scaleIdx];
+    const activeFn = sratcFactory(activeCentre, activeParams.fc, activeParams.vc);
+    ctx.strokeStyle = '#4361ee'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+    ctx.beginPath();
+    let started = false;
+    for (let Q = 1; Q <= maxQ; Q++) {
+        const v = activeFn(Q);
+        if (v < 0 || v > maxCost) { started = false; continue; }
+        const y = my(v);
+        if (!started) { ctx.moveTo(mx(Q), y); started = true; } else ctx.lineTo(mx(Q), y);
+    }
+    ctx.stroke();
+
+    // Draw LRATC envelope (bold red)
+    ctx.strokeStyle = '#ef476f'; ctx.lineWidth = 3; ctx.setLineDash([]);
+    ctx.beginPath();
+    started = false;
+    for (let Q = 1; Q <= maxQ; Q++) {
+        const v = lratc(Q);
+        if (v < 0 || v > maxCost) { started = false; continue; }
+        const y = my(v);
+        if (!started) { ctx.moveTo(mx(Q), y); started = true; } else ctx.lineTo(mx(Q), y);
+    }
+    ctx.stroke();
+
+    // MES marker at Q=50
+    const mesX = mx(50), mesY = my(lratc(50));
+    ctx.fillStyle = '#ef476f';
+    ctx.beginPath(); ctx.arc(mesX, mesY, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ef476f'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('MES', mesX, mesY - 10);
+
+    // Region labels
+    ctx.font = '10px system-ui'; ctx.fillStyle = '#888';
+    ctx.fillText('← EoS', mx(20), pad.top + 18);
+    ctx.fillText('CRS', mx(50), pad.top + 18);
+    ctx.fillText('DoS →', mx(78), pad.top + 18);
+
+    // LRATC label
+    ctx.fillStyle = '#ef476f'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText('LRATC', mx(maxQ - 16), my(lratc(maxQ)) - 8);
+
+    // Active SRATC label
+    ctx.fillStyle = '#4361ee';
+    const minV = activeFn(activeCentre);
+    ctx.fillText('SRATC', mx(activeCentre) + 6, my(minV) - 6);
+
+    // Current scale marker on LRATC
+    const currentQ = Math.round(20 + (scale - 0.3) / (2.5 - 0.3) * 60);
+    const currentCost = lratc(currentQ);
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath(); ctx.arc(mx(currentQ), my(currentCost), 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+function drawFirmsGraphs() {
+    drawProductionGraph();
+    drawCostsGraph();
+    drawProfitGraph();
+    drawLongRunGraph();
+}
+
+// Bind Firms controls
+['capitalSlider'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', drawProductionGraph);
+});
+['fcSlider', 'vcRateSlider', 'showTC', 'showATC', 'showMC'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', drawCostsGraph);
+});
+['mktPriceSlider', 'profitFcSlider', 'profitVcSlider'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', drawProfitGraph);
+});
+['scaleSlider'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', drawLongRunGraph);
+});
+
+
 updateMainGraph();
 populateScenarioDropdown();
 drawElasticityGraphs();
 drawGoodTypeGraphs();
+drawFirmsGraphs();

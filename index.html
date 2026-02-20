@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EasyEcon — Supply, Demand & Equilibrium</title>
+    <title>EasyEcon — Supply, Demand & Equilibrium | Costs & Production</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -19,6 +19,7 @@
     <button class="nav-btn active" data-tab="graph">Graph</button>
     <button class="nav-btn" data-tab="elasticity">Elasticity</button>
     <button class="nav-btn" data-tab="goods">Good Types</button>
+    <button class="nav-btn" data-tab="firms">Costs &amp; Production</button>
     <button class="nav-btn" data-tab="formulae">Formulae</button>
 </nav>
 
@@ -428,6 +429,189 @@
         </div>
 
     </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB 4 — FIRMS IN THE MARKETPLACE (Costs & Production)         -->
+<!-- ============================================================ -->
+<section id="tab-firms" class="tab-content">
+    <h2>Firms in the Marketplace — Costs &amp; Production</h2>
+    <p class="section-intro">Explore how firms produce output, incur costs, earn revenue, and maximise profit. Adjust the sliders to see the curves update in real time.</p>
+
+    <div class="firms-subtabs">
+        <button class="firms-sub-btn active" data-firms-sub="production">Production</button>
+        <button class="firms-sub-btn" data-firms-sub="costs">Costs</button>
+        <button class="firms-sub-btn" data-firms-sub="profit">Revenue &amp; Profit</button>
+        <button class="firms-sub-btn" data-firms-sub="longrun">Long Run</button>
+    </div>
+
+    <!-- ── SUB-TAB: PRODUCTION ── -->
+    <div id="firms-sub-production" class="firms-sub-content active">
+        <div class="firms-layout">
+            <div class="firms-canvas-wrap">
+                <canvas id="productionCanvas" width="520" height="400"></canvas>
+            </div>
+            <div class="firms-info">
+                <h3>Production in the Short Run</h3>
+                <p>In the short run at least one factor of production (capital) is fixed. The firm adds <strong>variable labour</strong> to a fixed amount of capital.</p>
+
+                <div class="firms-control-row">
+                    <label>Fixed Capital (K): <strong><span id="capitalVal">4</span></strong>
+                        <input type="range" id="capitalSlider" min="1" max="8" value="4" step="1">
+                    </label>
+                </div>
+
+                <table class="firms-table" id="productionTable">
+                    <thead>
+                        <tr><th>Labour (L)</th><th>Total Product (TP)</th><th>Marginal Product (MP)</th><th>Average Product (AP)</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="firms-insight">
+                    <strong>Law of Diminishing Marginal Returns:</strong> As more units of a variable factor (labour) are added to a fixed factor (capital), the marginal product of the variable factor eventually falls. MP rises at first (specialisation), peaks, then falls as workers start to get in each other's way.
+                </div>
+
+                <h4>Key Concepts</h4>
+                <ul>
+                    <li><strong>Total Product (TP)</strong> — total output produced</li>
+                    <li><strong>Marginal Product (MP)</strong> — extra output from one more worker: <em>MP = ΔTP / ΔL</em></li>
+                    <li><strong>Average Product (AP)</strong> — output per worker: <em>AP = TP / L</em></li>
+                    <li><strong>Short run</strong> — at least one factor fixed (typically capital)</li>
+                    <li><strong>Long run</strong> — all factors variable</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SUB-TAB: COSTS ── -->
+    <div id="firms-sub-costs" class="firms-sub-content">
+        <div class="firms-layout">
+            <div class="firms-canvas-wrap">
+                <canvas id="costsCanvas" width="520" height="400"></canvas>
+            </div>
+            <div class="firms-info">
+                <h3>Short-Run Cost Curves</h3>
+
+                <div class="firms-control-row">
+                    <label>Fixed Cost (FC): €<strong><span id="fcVal">100</span></strong>
+                        <input type="range" id="fcSlider" min="20" max="300" value="100" step="10">
+                    </label>
+                    <label>Variable Cost Rate: <strong><span id="vcRateVal">10</span></strong>
+                        <input type="range" id="vcRateSlider" min="2" max="30" value="10" step="1">
+                    </label>
+                    <div class="firms-display-toggle">
+                        <label><input type="checkbox" id="showTC" checked> TC &amp; VC &amp; FC</label>
+                        <label><input type="checkbox" id="showATC" checked> ATC / AVC / AFC</label>
+                        <label><input type="checkbox" id="showMC" checked> MC</label>
+                    </div>
+                </div>
+
+                <div class="firms-insight">
+                    <strong>Key relationships:</strong> MC intersects ATC and AVC at their minimum points. AFC always falls as output rises (fixed cost spread over more units). ATC = AVC + AFC.
+                </div>
+
+                <table class="firms-table" id="costsTable">
+                    <thead>
+                        <tr><th>Q</th><th>FC</th><th>VC</th><th>TC</th><th>AFC</th><th>AVC</th><th>ATC</th><th>MC</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <h4>Key Concepts</h4>
+                <ul>
+                    <li><strong>FC</strong> — Fixed Cost: does not change with output (rent, salaries, insurance)</li>
+                    <li><strong>VC</strong> — Variable Cost: changes with output (raw materials, hourly wages)</li>
+                    <li><strong>TC = FC + VC</strong></li>
+                    <li><strong>ATC = TC/Q</strong> · <strong>AVC = VC/Q</strong> · <strong>AFC = FC/Q</strong></li>
+                    <li><strong>MC = ΔTC/ΔQ</strong> — mirrors Marginal Product (MP↑ → MC↓; MP↓ → MC↑)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SUB-TAB: REVENUE & PROFIT ── -->
+    <div id="firms-sub-profit" class="firms-sub-content">
+        <div class="firms-layout">
+            <div class="firms-canvas-wrap">
+                <canvas id="profitCanvas" width="520" height="400"></canvas>
+            </div>
+            <div class="firms-info">
+                <h3>Revenue &amp; Profit Maximisation</h3>
+                <p>A firm maximises profit where <strong>MR = MC</strong>. At this output level, the gap between Total Revenue (TR) and Total Cost (TC) is greatest.</p>
+
+                <div class="firms-control-row">
+                    <label>Market Price (P): €<strong><span id="mktPriceVal">35</span></strong>
+                        <input type="range" id="mktPriceSlider" min="5" max="60" value="35" step="1">
+                    </label>
+                    <label>Fixed Cost (FC): €<strong><span id="profitFcVal">100</span></strong>
+                        <input type="range" id="profitFcSlider" min="20" max="300" value="100" step="10">
+                    </label>
+                    <label>Variable Cost Rate: <strong><span id="profitVcVal">10</span></strong>
+                        <input type="range" id="profitVcSlider" min="2" max="30" value="10" step="1">
+                    </label>
+                </div>
+
+                <div id="profit-summary" class="firms-insight"></div>
+
+                <h4>Key Concepts</h4>
+                <ul>
+                    <li><strong>TR = P × Q</strong> — Total Revenue</li>
+                    <li><strong>MR = ΔTR/ΔQ</strong> — Marginal Revenue (= Price in perfect competition)</li>
+                    <li><strong>Profit = TR − TC</strong></li>
+                    <li><strong>Profit-maximising rule: MR = MC</strong></li>
+                    <li><strong>Normal profit</strong>: TR = TC (zero economic profit)</li>
+                    <li><strong>Supernormal profit</strong>: TR &gt; TC</li>
+                    <li><strong>Loss</strong>: TC &gt; TR</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SUB-TAB: LONG RUN ── -->
+    <div id="firms-sub-longrun" class="firms-sub-content">
+        <div class="firms-layout">
+            <div class="firms-canvas-wrap">
+                <canvas id="longrunCanvas" width="520" height="400"></canvas>
+            </div>
+            <div class="firms-info">
+                <h3>Long Run: Economies &amp; Diseconomies of Scale</h3>
+                <p>In the long run, all factors are variable. The <strong>Long-Run Average Total Cost (LRATC)</strong> curve is the envelope of all short-run ATC curves.</p>
+
+                <div class="firms-control-row">
+                    <label>Scale Factor: <strong><span id="scaleVal">1.00</span></strong>
+                        <input type="range" id="scaleSlider" min="0.3" max="2.5" value="1" step="0.05">
+                    </label>
+                </div>
+
+                <div id="scale-insight" class="firms-insight"></div>
+
+                <table class="firms-table">
+                    <thead>
+                        <tr><th>Region</th><th>LRATC</th><th>Explanation</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr id="lr-row-eos"><td>Economies of Scale</td><td>Falling</td><td>Output ↑ faster than costs — specialisation, bulk buying, spreading FC</td></tr>
+                        <tr id="lr-row-cos"><td>Constant Returns</td><td>Flat</td><td>Output and costs rise proportionally</td></tr>
+                        <tr id="lr-row-dos"><td>Diseconomies of Scale</td><td>Rising</td><td>Firm too large — management problems, communication breakdowns, demotivation</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Internal Economies of Scale</h4>
+                <ul>
+                    <li><strong>Technical</strong> — specialist machinery, indivisibilities</li>
+                    <li><strong>Managerial</strong> — division of labour, specialist managers</li>
+                    <li><strong>Financial</strong> — larger firms borrow at lower interest rates</li>
+                    <li><strong>Marketing</strong> — advertising costs spread over more units</li>
+                    <li><strong>Risk-bearing</strong> — diversification reduces risk</li>
+                </ul>
+                <div class="firms-insight" style="margin-top:0.6rem">
+                    <strong>Irish example:</strong> Kerry Group — a small Irish co-op grew into a global food ingredients giant by exploiting economies of scale in production, R&amp;D, and global distribution.
+                </div>
+            </div>
+        </div>
+    </div>
+
 </section>
 
 <!-- ============================================================ -->
